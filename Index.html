@@ -20,6 +20,8 @@
   }
   *{box-sizing:border-box}
   body{margin:0;background:var(--bg);color:var(--text);overflow-x:hidden;}
+  
+  /* UPDATED: Video background for login page (Audio ON) */
   video.bg{
     position:fixed;inset:0;z-index:-2;
     width:100%;height:100%;object-fit:cover;
@@ -40,9 +42,10 @@
     justify-content:center;
     padding:20px;
   }
+  /* UPDATED: Card background slightly transparent for better video visibility */
   .card{
     width:min(600px,95%);
-    background:transparent;
+    background:rgba(0,0,0,0.5); 
     border-radius:18px;
     border:1px solid var(--border);
     box-shadow:0 0 24px rgba(0,0,0,0.7);
@@ -56,42 +59,62 @@
   }
   h2{text-align:center;margin:6px 0 10px;}
   .muted{color:var(--muted);font-size:13px;}
-  .field{margin:10px 0;}
-  label{display:block;margin-bottom:4px;font-size:14px;color:var(--muted);}
+  
+  /* UPDATED: Field styling to match the image */
+  .field{margin:10px 0 20px;}
+  label{
+    display:block;margin-bottom:4px;font-size:14px;
+    color:#FF00FF; /* Magenta color */
+    font-weight: 700;
+  }
   input{
     width:100%;padding:12px;
-    border-radius:8px;border:1px solid var(--border);
-    background:#111;color:#fff;font-size:15px;outline:none;
+    border-radius:8px;
+    /* Magenta border */
+    border:2px solid #FF00FF; 
+    background:rgba(0,0,0,0.7);
+    color:#fff;font-size:16px;outline:none;
+    /* Magenta glow */
+    box-shadow:0 0 8px rgba(255,0,255,0.5); 
+    font-weight: 600;
   }
-  input[readonly]{opacity:0.85;}
-  button{cursor:pointer;font-weight:700;border:none;border-radius:8px;}
-  .btn-main{
-    background:var(--red);
+  input[readonly]{opacity:0.95;}
+  button{cursor:pointer;font-weight:900;border:none;border-radius:8px;font-size:16px;}
+  
+  /* UPDATED: Main buttons (GET KEY, LOGIN) magenta and shiny */
+  .btn-main, .btn-secondary{
+    background:#FF00FF; /* Magenta */
     color:#fff;
-    padding:12px 18px;
+    padding:14px 18px;
+    flex:1;
+    min-width: 150px;
+    box-shadow:0 0 16px rgba(255,0,255,0.7); /* Stronger glow */
   }
   .btn-secondary{
-    background:transparent;
-    padding:12px 18px;
-    border:1px solid var(--border);
-    color:var(--text);
+    background:#FF00FF; /* Keep LOGIN button same as GET KEY */
+    border:none;
   }
   .btn-row{
     display:flex;
     gap:10px;
     justify-content:center;
-    margin-top:8px;
+    margin-top:20px; /* Increased margin */
     flex-wrap:wrap;
   }
+  
+  /* UPDATED: Search button magenta and strong */
   .search-btn{
     margin:8px 0 14px;
-    padding:12px 18px;
+    padding:14px 18px;
     text-align:center;
-    background:var(--blue);
+    background:#FF00FF; /* Magenta */
     color:#fff;
     border-radius:10px;
-    font-weight:700;
+    font-weight:900;
     cursor:pointer;
+    font-size: 18px;
+    box-shadow:0 0 16px rgba(255,0,255,0.7); /* Stronger glow */
+    letter-spacing: 1px;
   }
   .spinner{
     width:20px;height:20px;
@@ -252,17 +275,15 @@
 </head>
 <body>
 
-<!-- Video background for login page -->
-<video class="bg" autoplay loop playsinline>
+<video class="bg" id="bgVideo" autoplay loop>
   <source src="anime.mp4" type="video/mp4">
+  Your browser does not support the video tag.
 </video>
 <div class="overlay"></div>
 
-<!-- Image background for prediction page -->
 <img class="bg-image" id="bgImage" src="anime.png" alt="Background">
 
 <div class="wrap">
-  <!-- LOGIN CARD -->
   <div class="card" id="loginCard">
     <img src="logo.png" class="logo" alt="Logo">
     <h2>@APEX PREDICTION PANEL</h2>
@@ -294,7 +315,6 @@
     </div>
   </div>
 
-  <!-- PREDICTION CARD -->
   <div class="card hidden" id="predictCard">
     <div class="topbar">
       <div>
@@ -334,7 +354,6 @@
   </div>
 </div>
 
-<!-- GAME SELECT MODAL -->
 <div class="modal-back" id="modalBack">
   <div class="modal">
     <h3>SELECT PRO GAME MOD's !</h3>
@@ -342,7 +361,6 @@
   </div>
 </div>
 
-<!-- HIDDEN ADMIN -->
 <div id="adminDot" class="admin-dot"></div>
 <div id="adminPanel" class="admin-panel">
   <h4>Admin Panel</h4>
@@ -381,7 +399,8 @@
   // ---------- ELEMENTS ----------
   const loginCard   = document.getElementById('loginCard');
   const predictCard = document.getElementById('predictCard');
-  const bgVideo     = document.querySelector('.bg');
+  // UPDATED: Use ID for better selection
+  const bgVideo     = document.getElementById('bgVideo'); 
   const overlay     = document.querySelector('.overlay');
   const bgImage     = document.getElementById('bgImage');
 
@@ -711,6 +730,29 @@
   // small: enter key on license field triggers login
   licenseKey.addEventListener('keydown',e=>{
     if(e.key==="Enter") loginBtn.click();
+  });
+  
+  // ---------- UPDATED: VIDEO AUTO PLAY (WITH SOUND) ----------
+  // वीडियो को चलाने का प्रयास करें (मॉडर्न ब्राउज़र के लिए यूजर इंटरैक्शन की आवश्यकता हो सकती है)
+  window.addEventListener('load', () => {
+    if (bgVideo) {
+      // पहले वीडियो को अन-म्यूट करें
+      bgVideo.muted = false; 
+      // प्ले करने की कोशिश करें
+      bgVideo.play().catch(error => {
+        console.log('Video autoplay with sound was blocked. User interaction required.');
+        // अगर ब्लॉक हो जाता है, तो यूजर को एक बार क्लिक करने के लिए कहें 
+        const playVideoOnce = () => {
+          bgVideo.play();
+          // एक बार प्ले होने के बाद लिसनर्स हटा दें
+          document.removeEventListener('click', playVideoOnce);
+          document.removeEventListener('keydown', playVideoOnce);
+        };
+        // क्लिक या की-प्रेस इवेंट पर वीडियो प्ले करने के लिए लिसनर जोड़ें
+        document.addEventListener('click', playVideoOnce);
+        document.addEventListener('keydown', playVideoOnce);
+      });
+    }
   });
 
 </script>
