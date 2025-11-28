@@ -1,0 +1,702 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>APEX PREDICTION PANEL — PRO</title>
+<style>
+  :root{
+    --blue:#007bff;
+    --blue2:#00a2ff;
+    --red:#ff004c;
+    --green:#00ff66;
+    --orange:#ff9900;
+    --bg:#000;
+    --card:#0a0a0a;
+    --border:#1a1a1a;
+    --text:#f5f5f5;
+    --muted:#bbbbbb;
+    font-family:'Poppins',sans-serif;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--text);overflow-x:hidden;}
+  video.bg{
+    position:fixed;inset:0;z-index:-2;
+    width:100%;height:100%;object-fit:cover;
+  }
+  .overlay{
+    position:fixed;inset:0;z-index:-1;
+    background:rgba(0,0,0,0.55);
+  }
+  .wrap{
+    min-height:100vh;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    padding:20px;
+  }
+  .card{
+    width:min(600px,95%);
+    background:var(--card);
+    border-radius:18px;
+    border:1px solid var(--border);
+    box-shadow:0 0 24px rgba(0,0,0,0.7);
+    padding:20px;
+  }
+  .hidden{display:none}
+  .logo{
+    width:110px;height:110px;border-radius:999px;
+    border:3px solid rgba(255,255,255,0.15);
+    display:block;margin:0 auto;
+  }
+  h2{text-align:center;margin:6px 0 10px;}
+  .muted{color:var(--muted);font-size:13px;}
+  .field{margin:10px 0;}
+  label{display:block;margin-bottom:4px;font-size:14px;color:var(--muted);}
+  input{
+    width:100%;padding:12px;
+    border-radius:8px;border:1px solid var(--border);
+    background:#111;color:#fff;font-size:15px;outline:none;
+  }
+  input[readonly]{opacity:0.85;}
+  button{cursor:pointer;font-weight:700;border:none;border-radius:8px;}
+  .btn-main{
+    background:var(--red);
+    color:#fff;
+    padding:12px 18px;
+  }
+  .btn-secondary{
+    background:transparent;
+    padding:12px 18px;
+    border:1px solid var(--border);
+    color:var(--text);
+  }
+  .btn-row{
+    display:flex;
+    gap:10px;
+    justify-content:center;
+    margin-top:8px;
+    flex-wrap:wrap;
+  }
+  .search-btn{
+    margin:8px 0 14px;
+    padding:12px 18px;
+    text-align:center;
+    background:var(--blue);
+    color:#fff;
+    border-radius:10px;
+    font-weight:700;
+    cursor:pointer;
+  }
+  .spinner{
+    width:20px;height:20px;
+    border-radius:50%;
+    border:3px solid rgba(255,255,255,0.25);
+    border-top-color:#fff;
+    display:inline-block;
+    margin-left:8px;
+    animation:spin 1s linear infinite;
+  }
+  @keyframes spin{to{transform:rotate(360deg)}}
+
+  /* modal */
+  .modal-back{
+    position:fixed;inset:0;
+    background:rgba(0,0,0,0.6);
+    display:none;align-items:center;justify-content:center;
+    z-index:10;
+  }
+  .modal{
+    width:min(400px,90%);
+    max-height:80vh;
+    overflow:auto;
+    background:#fff;
+    color:#111;
+    border-radius:10px;
+    padding:12px;
+  }
+  .modal h3{margin:6px 8px 10px;}
+  .game-item{
+    padding:10px;
+    border-bottom:1px solid #eee;
+    cursor:pointer;
+  }
+  .game-item:hover{background:#f2f2f2;}
+
+  /* prediction page */
+  .topbar{
+    display:flex;
+    justify-content:space-between;
+    align-items:flex-start;
+  }
+  .pred-row{
+    display:flex;
+    gap:10px;
+    margin-top:12px;
+  }
+  .pred-row input{
+    flex:1;
+    border:2px solid var(--blue);
+    background:rgba(0,0,50,0.4);
+  }
+  #genBtn{
+    background:var(--red);
+    color:#fff;
+    padding:12px 16px;
+  }
+  #markWin{
+    background:var(--green);
+    color:#000;
+    padding:9px 14px;
+  }
+  #markLoss{
+    background:var(--red);
+    color:#fff;
+    padding:9px 14px;
+  }
+  #predictionOutput{
+    text-align:center;
+    font-size:52px;
+    font-weight:800;
+    margin-top:16px;
+    text-shadow:0 0 14px rgba(255,255,255,0.35);
+  }
+  .stats{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    margin-top:12px;
+    color:var(--muted);
+    flex-wrap:wrap;
+    gap:8px;
+  }
+  .history{
+    margin-top:14px;
+    border-radius:10px;
+    border:1px solid var(--border);
+    background:#111;
+    padding:8px;
+    max-height:230px;
+    overflow:auto;
+  }
+  .history-item{
+    display:flex;
+    justify-content:space-between;
+    padding:9px;
+    border-bottom:1px dashed rgba(255,255,255,0.08);
+    border-left:4px solid transparent;
+    border-radius:6px;
+    margin-bottom:5px;
+    font-size:13px;
+  }
+  .history-item.red{border-left-color:var(--red);}
+  .history-item.green{border-left-color:var(--green);}
+  .history-item.blue{border-left-color:var(--blue2);}
+  .history-item.orange{border-left-color:var(--orange);}
+  .history-item:last-child{border-bottom:none;}
+
+  #countdown{color:#00ff00;font-weight:600;}
+
+  /* admin */
+  .admin-dot{
+    position:fixed;
+    right:10px;
+    bottom:14px;
+    width:34px;height:34px;
+    opacity:0.02;
+    z-index:99;
+  }
+  .admin-panel{
+    position:fixed;
+    right:10px;
+    bottom:60px;
+    width:340px;
+    background:#111;
+    color:#fff;
+    padding:10px;
+    border-radius:10px;
+    border:1px solid var(--border);
+    display:none;
+    z-index:100;
+    font-size:13px;
+  }
+  .admin-panel h4{margin:4px 0 8px;}
+  .admin-panel input, .admin-panel select{
+    width:100%;
+    margin:4px 0;
+    padding:8px;
+    border-radius:6px;
+    border:1px solid var(--border);
+    background:#181818;
+    color:#fff;
+    outline:none;
+    font-size:13px;
+  }
+  .admin-panel button{
+    padding:8px 12px;
+    margin-top:6px;
+    border-radius:6px;
+    background:var(--red);
+    color:#fff;
+  }
+
+  @media(max-width:480px){
+    .stats{flex-direction:column;align-items:flex-start;}
+  }
+</style>
+</head>
+<body>
+
+<!-- background -->
+<video class="bg" autoplay muted loop playsinline>
+  <source src="anime.mp4" type="video/mp4">
+</video>
+<div class="overlay"></div>
+
+<div class="wrap">
+  <!-- LOGIN CARD -->
+  <div class="card" id="loginCard">
+    <img src="logo.png" class="logo" alt="Logo">
+    <h2>@APEX PREDICTION PANEL</h2>
+
+    <div id="searchBtn" class="search-btn">
+      SEARCH VERSION <span id="searchSpin" class="spinner" style="display:none"></span>
+    </div>
+
+    <div class="field">
+      <label>Game Version</label>
+      <input id="gameVersion" readonly>
+    </div>
+    <div class="field">
+      <label>Game Name</label>
+      <input id="gameName" readonly>
+    </div>
+    <div class="field">
+      <label>Play Mode</label>
+      <input id="playMode" value="SAFE { 100% Accuracy }" readonly>
+    </div>
+    <div class="field">
+      <label>License Key</label>
+      <input id="licenseKey" placeholder="Enter your license key">
+    </div>
+
+    <div class="btn-row">
+      <button class="btn-main" id="getKeyBtn">GET KEY</button>
+      <button class="btn-secondary" id="loginBtn">LOGIN</button>
+    </div>
+  </div>
+
+  <!-- PREDICTION CARD -->
+  <div class="card hidden" id="predictCard">
+    <div class="topbar">
+      <div>
+        <h3 id="panelGameName">91 CLUB {PRO LZR}</h3>
+        <div class="muted">Period: <span id="periodNumber">2025753</span></div>
+      </div>
+      <div style="text-align:right">
+        <div class="muted">Your Key: <b id="keyShow">--</b></div>
+        <div class="muted">Method: <b id="methodShow">random</b></div>
+        <div class="muted">Server: <b style="color:#00ff66">ONLINE</b></div>
+      </div>
+    </div>
+
+    <div class="pred-row">
+      <input id="periodInput" value="2025753">
+      <button id="genBtn">Generate Prediction</button>
+    </div>
+    <div class="muted" style="text-align:right;margin-top:4px;">
+      Expires in: <span id="countdown">--:--:--</span>
+    </div>
+
+    <div id="predictionOutput">—</div>
+
+    <div class="stats">
+      <div>Total: <b id="totalCount">0</b></div>
+      <div>Wins: <b id="winCount">0</b></div>
+      <div>Loss: <b id="lossCount">0</b></div>
+      <div>
+        <button id="markWin">MARK WIN</button>
+        <button id="markLoss">MARK LOSS</button>
+      </div>
+    </div>
+
+    <div class="history" id="historyList">
+      <div class="muted">No predictions yet</div>
+    </div>
+  </div>
+</div>
+
+<!-- GAME SELECT MODAL -->
+<div class="modal-back" id="modalBack">
+  <div class="modal">
+    <h3>SELECT PRO GAME MOD's !</h3>
+    <div id="gameList"></div>
+  </div>
+</div>
+
+<!-- HIDDEN ADMIN -->
+<div id="adminDot" class="admin-dot"></div>
+<div id="adminPanel" class="admin-panel">
+  <h4>Admin Panel</h4>
+  <div>Generate timed license key</div>
+  <label>Duration Value</label>
+  <input type="number" id="admDuration" value="24" min="1">
+  <label>Duration Unit</label>
+  <select id="admUnit">
+    <option value="minutes">Minutes</option>
+    <option value="hours" selected>Hours</option>
+    <option value="days">Days</option>
+    <option value="months">Months</option>
+  </select>
+  <button id="admCreateKey">Create Key</button>
+  <div id="admMsg" style="margin-top:6px;color:var(--muted);font-size:12px;"></div>
+</div>
+
+<script type="module">
+  // ---------- Firebase ----------
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-app.js";
+  import { getDatabase, ref, set, get, push, update } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-database.js";
+
+  const firebaseConfig = {
+    apiKey: "AIzaSyBs7eQyMrcN8kJWMHl2ac2UZHlYQ6DypD8",
+    authDomain: "terminal-xxrr.firebaseapp.com",
+    databaseURL: "https://terminal-xxrr-default-rtdb.asia-southeast1.firebasedatabase.app",
+    projectId: "terminal-xxrr",
+    storageBucket: "terminal-xxrr.firebasestorage.app",
+    messagingSenderId: "722753278120",
+    appId: "1:722753278120:web:bfa37aab39635a4e57f29d",
+    measurementId: "G-E3MZH3E1K5"
+  };
+  const app = initializeApp(firebaseConfig);
+  const db  = getDatabase(app);
+
+  // ---------- ELEMENTS ----------
+  const loginCard   = document.getElementById('loginCard');
+  const predictCard = document.getElementById('predictCard');
+
+  const searchBtn  = document.getElementById('searchBtn');
+  const searchSpin = document.getElementById('searchSpin');
+  const modalBack  = document.getElementById('modalBack');
+  const gameList   = document.getElementById('gameList');
+
+  const gameVersion = document.getElementById('gameVersion');
+  const gameName    = document.getElementById('gameName');
+  const playMode    = document.getElementById('playMode');
+  const licenseKey  = document.getElementById('licenseKey');
+
+  const getKeyBtn = document.getElementById('getKeyBtn');
+  const loginBtn  = document.getElementById('loginBtn');
+
+  const panelGameName = document.getElementById('panelGameName');
+  const periodNumber  = document.getElementById('periodNumber');
+  const periodInput   = document.getElementById('periodInput');
+  const genBtn        = document.getElementById('genBtn');
+  const predictionOutput = document.getElementById('predictionOutput');
+  const methodShow    = document.getElementById('methodShow');
+  const keyShow       = document.getElementById('keyShow');
+
+  const totalCount = document.getElementById('totalCount');
+  const winCount   = document.getElementById('winCount');
+  const lossCount  = document.getElementById('lossCount');
+  const historyList= document.getElementById('historyList');
+  const markWin    = document.getElementById('markWin');
+  const markLoss   = document.getElementById('markLoss');
+  const countdownEl= document.getElementById('countdown');
+
+  const adminDot   = document.getElementById('adminDot');
+  const adminPanel = document.getElementById('adminPanel');
+  const admDuration= document.getElementById('admDuration');
+  const admUnit    = document.getElementById('admUnit');
+  const admCreateKey = document.getElementById('admCreateKey');
+  const admMsg     = document.getElementById('admMsg');
+
+  // ---------- GAME LIST ----------
+  const GAMES = [
+    "OK WIN {PRO LZR}",
+    "6 CLUB {PRO LZR}",
+    "TIRANGA {PRO LZR}",
+    "BDG WIN {PRO LZR}",
+    "91 CLUB {PRO LZR}",
+    "GOA GAMES {PRO LZR}",
+    "TASHAN WIN {PRO LZR}",
+    "51 GAME {PRO LZR}",
+    "82 LOTTERY {PRO LZR}",
+    "JALWA GAME {PRO LZR}"
+  ];
+  GAMES.forEach(name=>{
+    const row = document.createElement('div');
+    row.className = 'game-item';
+    row.textContent = name;
+    row.onclick = ()=>{
+      gameName.value = name;
+      gameVersion.value = "2025" + Math.floor(Math.random()*900+100);
+      modalBack.style.display='none';
+    };
+    gameList.appendChild(row);
+  });
+
+  // default
+  gameName.value = "91 CLUB {PRO LZR}";
+  gameVersion.value = "2025753";
+
+  // ---------- SEARCH VERSION (2 sec) ----------
+  searchBtn.onclick = async ()=>{
+    searchSpin.style.display = 'inline-block';
+    await new Promise(r=>setTimeout(r,2000));
+    searchSpin.style.display = 'none';
+    modalBack.style.display = 'flex';
+  };
+  modalBack.onclick = e=>{
+    if(e.target === modalBack) modalBack.style.display='none';
+  };
+
+  // ---------- GET KEY BUTTON ----------
+  getKeyBtn.onclick = ()=> {
+    window.open("https://t.me/Predict456","_blank");
+  };
+
+  // ---------- ADMIN PANEL ----------
+  adminDot.onclick = ()=>{
+    const pass = prompt("Enter admin code:");
+    if(pass === "456"){
+      adminPanel.style.display = adminPanel.style.display==='block'?'none':'block';
+    } else if(pass !== null){
+      alert("Wrong code");
+    }
+  };
+
+  admCreateKey.onclick = async ()=>{
+    const durVal = parseInt(admDuration.value || "1",10);
+    const unit   = admUnit.value;
+    if(durVal <= 0) { alert("Duration invalid"); return; }
+
+    // convert to ms
+    let ms = 0;
+    if(unit==="minutes") ms = durVal*60*1000;
+    else if(unit==="hours") ms = durVal*60*60*1000;
+    else if(unit==="days") ms = durVal*24*60*60*1000;
+    else if(unit==="months") ms = durVal*30*24*60*60*1000;
+
+    const now = Date.now();
+    const expires = now + ms;
+    const key = Math.random().toString(36).slice(2,10).toUpperCase();
+
+    await set(ref(db,"licenseKeys/"+key),{
+      key,
+      createdAt: now,
+      expires,
+      unit,
+      duration: durVal
+    });
+
+    admMsg.textContent = "New key: "+key+"  (expires: "+new Date(expires).toLocaleString()+")";
+  };
+
+  // ---------- LOGIN + LICENSE CHECK ----------
+  let activeKey = null;
+  let countdownTimer = null;
+
+  loginBtn.onclick = async ()=>{
+    const key = (licenseKey.value || '').trim();
+    if(!key){ alert("Enter license key"); return; }
+
+    const snap = await get(ref(db,"licenseKeys/"+key));
+    if(!snap.exists()){
+      alert("Invalid key");
+      return;
+    }
+    const data = snap.val();
+    if(Date.now() > data.expires){
+      alert("Key expired");
+      return;
+    }
+
+    activeKey = key;
+    keyShow.textContent = key;
+    panelGameName.textContent = gameName.value || "GAME";
+    periodNumber.textContent  = gameVersion.value || "2025";
+    periodInput.value         = gameVersion.value || "2025";
+
+    // switch screens
+    loginCard.classList.add('hidden');
+    predictCard.classList.remove('hidden');
+
+    // start countdown
+    startCountdown(data.expires);
+
+    // load history from Firebase
+    await loadHistoryForKey(key);
+  };
+
+  function startCountdown(expTs){
+    if(countdownTimer) clearInterval(countdownTimer);
+    const tick = ()=>{
+      const diff = expTs - Date.now();
+      if(diff <= 0){
+        countdownEl.textContent = "EXPIRED";
+        alert("License expired");
+        location.reload();
+        return;
+      }
+      const s = Math.floor(diff/1000)%60;
+      const m = Math.floor(diff/60000)%60;
+      const h = Math.floor(diff/3600000);
+      countdownEl.textContent =
+        String(h).padStart(2,'0')+":"+
+        String(m).padStart(2,'0')+":"+
+        String(s).padStart(2,'0');
+    };
+    tick();
+    countdownTimer = setInterval(tick,1000);
+  }
+
+  // ---------- PREDICTION LOGIC ----------
+  let total=0,wins=0,loss=0;
+  let history = []; // local copy of last predictions
+
+  genBtn.onclick = async ()=>{
+    if(!activeKey){ alert("Not logged in"); return; }
+
+    genBtn.disabled = true;
+    genBtn.textContent = "Analyzing...";
+    await new Promise(r=>setTimeout(r,1800));
+
+    const options = ["RED","GREEN","SMALL","BIG"];
+    const pick = options[Math.floor(Math.random()*options.length)];
+    showPrediction(pick);
+
+    await savePredictionToFirebase(pick);
+    await loadHistoryForKey(activeKey); // refresh stats + history
+
+    genBtn.disabled = false;
+    genBtn.textContent = "Generate Prediction";
+  };
+
+  function showPrediction(p){
+    predictionOutput.textContent = p;
+    const col = {
+      "RED"  : "#ff004c",
+      "GREEN": "#00ff66",
+      "SMALL": "#00a2ff",
+      "BIG"  : "#ff9900"
+    }[p] || "#ffffff";
+    predictionOutput.style.color = col;
+
+    const methods = ["repeat","zig zag pattern","dragon pattern","mirror","random"];
+    methodShow.textContent = methods[Math.floor(Math.random()*methods.length)];
+  }
+
+  async function savePredictionToFirebase(pred){
+    const per = periodInput.value || periodNumber.textContent;
+    const obj = {
+      period: per,
+      prediction: pred,
+      timestamp: Date.now(),
+      result: "PENDING"
+    };
+    const pRef = push(ref(db,"predictions/"+activeKey));
+    await set(pRef,obj);
+    // auto increment period
+    incrementPeriod();
+  }
+
+  function incrementPeriod(){
+    let val = periodInput.value || "0";
+    if(/^\d+$/.test(val)){
+      val = String(BigInt(val)+1n);
+    } else {
+      val = val + "1";
+    }
+    periodInput.value = val;
+    periodNumber.textContent = val;
+  }
+
+  async function loadHistoryForKey(key){
+    const snap = await get(ref(db,"predictions/"+key));
+    historyList.innerHTML = "";
+    history = [];
+    total = wins = loss = 0;
+
+    if(!snap.exists()){
+      historyList.innerHTML = "<div class='muted'>No predictions yet</div>";
+      updateStats();
+      return;
+    }
+
+    const data = snap.val();
+    const rows = Object.entries(data).map(([id,val])=>({id,...val}))
+      .sort((a,b)=>b.timestamp-a.timestamp);
+
+    history = rows;
+
+    rows.forEach(r=>{
+      total++;
+      if(r.result === "WIN") wins++;
+      if(r.result === "LOSS") loss++;
+
+      const div = document.createElement('div');
+      const colorClass = {
+        "RED":"red",
+        "GREEN":"green",
+        "SMALL":"blue",
+        "BIG":"orange"
+      }[r.prediction] || "";
+      div.className = "history-item "+colorClass;
+
+      const predColor = {
+        "RED":"#ff004c",
+        "GREEN":"#00ff66",
+        "SMALL":"#00a2ff",
+        "BIG":"#ff9900"
+      }[r.prediction] || "#ffffff";
+
+      div.innerHTML = `
+        <div>
+          <b style="color:${predColor}">${r.prediction}</b> •
+          ${new Date(r.timestamp).toLocaleString()}<br>
+          <span class="muted">Period ${r.period}</span>
+        </div>
+        <div style="text-align:right;">
+          <b>${r.result}</b><br>
+          <span class="muted" style="font-size:11px;">${r.id.slice(-6)}</span>
+        </div>
+      `;
+      historyList.appendChild(div);
+    });
+
+    updateStats();
+  }
+
+  function updateStats(){
+    totalCount.textContent = total;
+    winCount.textContent   = wins;
+    lossCount.textContent  = loss;
+  }
+
+  // MARK WIN / LOSS -> last pending prediction
+  markWin.onclick  = ()=> markResult("WIN");
+  markLoss.onclick = ()=> markResult("LOSS");
+
+  async function markResult(res){
+    if(!activeKey){ alert("Not logged in"); return; }
+    if(history.length===0){ alert("No predictions"); return; }
+
+    // find last PENDING (most recent first)
+    const target = history.find(h=>h.result==="PENDING");
+    if(!target){ alert("No PENDING prediction"); return; }
+
+    await update(ref(db,`predictions/${activeKey}/${target.id}`),{
+      result:res,
+      markedAt:Date.now()
+    });
+    await loadHistoryForKey(activeKey);
+  }
+
+  // small: enter key on license field triggers login
+  licenseKey.addEventListener('keydown',e=>{
+    if(e.key==="Enter") loginBtn.click();
+  });
+
+</script>
+</body>
+</html>
