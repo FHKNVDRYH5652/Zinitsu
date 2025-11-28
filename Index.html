@@ -21,7 +21,7 @@
   *{box-sizing:border-box}
   body{margin:0;background:var(--bg);color:var(--text);overflow-x:hidden;}
   
-  /* UPDATED: Video background for login page (Audio ON) */
+  /* UPDATED: Video background for login page (Audio ON by default, will be paused on login) */
   video.bg{
     position:fixed;inset:0;z-index:-2;
     width:100%;height:100%;object-fit:cover;
@@ -547,11 +547,18 @@
     periodNumber.textContent  = gameVersion.value || "2025";
     periodInput.value         = gameVersion.value || "2025";
 
-    // switch screens and backgrounds
+    // UPDATED: Video Pause and Screen Switch Logic
+    
+    // 1. Video को रोकें ताकि Prediction Page पर कोई ऑडियो न आए
+    if (bgVideo) {
+        bgVideo.pause();
+    }
+    
+    // 2. Screen switch करें
     loginCard.classList.add('hidden');
     predictCard.classList.remove('hidden');
     
-    // Hide video background and show image background for prediction page
+    // 3. Video background को Hide करें और Image background को Show करें
     bgVideo.style.display = 'none';
     overlay.style.display = 'none';
     bgImage.style.display = 'block';
@@ -732,7 +739,7 @@
     if(e.key==="Enter") loginBtn.click();
   });
   
-  // ---------- UPDATED: VIDEO AUTO PLAY (WITH SOUND) ----------
+  // ---------- VIDEO AUTO PLAY (WITH SOUND) for Login Page ----------
   // वीडियो को चलाने का प्रयास करें (मॉडर्न ब्राउज़र के लिए यूजर इंटरैक्शन की आवश्यकता हो सकती है)
   window.addEventListener('load', () => {
     if (bgVideo) {
