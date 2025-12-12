@@ -21,7 +21,6 @@
   *{box-sizing:border-box}
   body{margin:0;background:var(--bg);color:var(--text);overflow-x:hidden;}
   
-  /* UPDATED: Video background for login page (Audio ON by default, will be paused on login) */
   video.bg{
     position:fixed;inset:0;z-index:-2;
     width:100%;height:100%;object-fit:cover;
@@ -42,7 +41,6 @@
     justify-content:center;
     padding:20px;
   }
-  /* UPDATED: Card background slightly transparent for better video visibility */
   .card{
     width:min(600px,95%);
     background:rgba(0,0,0,0.5); 
@@ -60,60 +58,55 @@
   h2{text-align:center;margin:6px 0 10px;}
   .muted{color:var(--muted);font-size:13px;}
   
-  /* UPDATED: Field styling to match the image */
   .field{margin:10px 0 20px;}
   label{
     display:block;margin-bottom:4px;font-size:14px;
-    color:#FF00FF; /* Magenta color */
+    color:#FF00FF;
     font-weight: 700;
   }
   input{
     width:100%;padding:12px;
     border-radius:8px;
-    /* Magenta border */
     border:2px solid #FF00FF; 
     background:rgba(0,0,0,0.7);
     color:#fff;font-size:16px;outline:none;
-    /* Magenta glow */
     box-shadow:0 0 8px rgba(255,0,255,0.5); 
     font-weight: 600;
   }
   input[readonly]{opacity:0.95;}
   button{cursor:pointer;font-weight:900;border:none;border-radius:8px;font-size:16px;}
   
-  /* UPDATED: Main buttons (GET KEY, LOGIN) magenta and shiny */
   .btn-main, .btn-secondary{
-    background:#FF00FF; /* Magenta */
+    background:#FF00FF;
     color:#fff;
     padding:14px 18px;
     flex:1;
     min-width: 150px;
-    box-shadow:0 0 16px rgba(255,0,255,0.7); /* Stronger glow */
+    box-shadow:0 0 16px rgba(255,0,255,0.7);
   }
   .btn-secondary{
-    background:#FF00FF; /* Keep LOGIN button same as GET KEY */
+    background:#FF00FF;
     border:none;
   }
   .btn-row{
     display:flex;
     gap:10px;
     justify-content:center;
-    margin-top:20px; /* Increased margin */
+    margin-top:20px;
     flex-wrap:wrap;
   }
   
-  /* UPDATED: Search button magenta and strong */
   .search-btn{
     margin:8px 0 14px;
     padding:14px 18px;
     text-align:center;
-    background:#FF00FF; /* Magenta */
+    background:#FF00FF;
     color:#fff;
     border-radius:10px;
     font-weight:900;
     cursor:pointer;
     font-size: 18px;
-    box-shadow:0 0 16px rgba(255,0,255,0.7); /* Stronger glow */
+    box-shadow:0 0 16px rgba(255,0,255,0.7);
     letter-spacing: 1px;
   }
   .spinner{
@@ -127,7 +120,6 @@
   }
   @keyframes spin{to{transform:rotate(360deg)}}
 
-  /* modal */
   .modal-back{
     position:fixed;inset:0;
     background:rgba(0,0,0,0.6);
@@ -151,7 +143,6 @@
   }
   .game-item:hover{background:#f2f2f2;}
 
-  /* prediction page */
   .topbar{
     display:flex;
     justify-content:space-between;
@@ -225,7 +216,6 @@
 
   #countdown{color:#00ff00;font-weight:600;}
 
-  /* admin */
   .admin-dot{
     position:fixed;
     right:10px;
@@ -271,6 +261,10 @@
   @media(max-width:480px){
     .stats{flex-direction:column;align-items:flex-start;}
   }
+
+  /* AUTO mode: hide manual period + win/loss buttons */
+  #periodInput{display:none;}
+  #markWin,#markLoss{display:none;}
 </style>
 </head>
 <body>
@@ -319,12 +313,15 @@
     <div class="topbar">
       <div>
         <h3 id="panelGameName">91 CLUB {PRO LZR}</h3>
-        <div class="muted">Period: <span id="periodNumber">2025753</span></div>
+        <div class="muted">
+          Period (NEXT): <span id="periodNumber">2025753</span><br>
+          <span class="muted" style="font-size:11px;">Live last result auto-fetch ho raha hai</span>
+        </div>
       </div>
       <div style="text-align:right">
         <div class="muted">Your Key: <b id="keyShow">--</b></div>
         <div class="muted">Method: <b id="methodShow">random</b></div>
-        <div class="muted">Server: <b style="color:#00ff66">ONLINE</b></div>
+        <div class="muted">Server: <b style="color:#00ff66" id="serverStatus">ONLINE</b></div>
       </div>
     </div>
 
@@ -342,9 +339,8 @@
       <div>Total: <b id="totalCount">0</b></div>
       <div>Wins: <b id="winCount">0</b></div>
       <div>Loss: <b id="lossCount">0</b></div>
-      <div>
-        <button id="markWin">MARK WIN</button>
-        <button id="markLoss">MARK LOSS</button>
+      <div style="font-size:11px;color:var(--muted);">
+        Win/Loss auto-detect from live result
       </div>
     </div>
 
@@ -383,6 +379,7 @@
   import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-app.js";
   import { getDatabase, ref, set, get, push, update } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-database.js";
 
+  // IMPORTANT: yahi config tumhari old working file jaisa hai
   const firebaseConfig = {
     apiKey: "AIzaSyBs7eQyMrcN8kJWMHl2ac2UZHlYQ6DypD8",
     authDomain: "terminal-xxrr.firebaseapp.com",
@@ -396,10 +393,17 @@
   const app = initializeApp(firebaseConfig);
   const db  = getDatabase(app);
 
+  // ---------- LIVE API CONFIG ----------
+  const API_URL = 'https://harshpredictor.site/api/api.php';
+  let latestIssue = null;
+  let liveTimer   = null;
+  let activeKey   = null;
+  let countdownTimer = null;
+  let pendingAuto = null; // { id, period, prediction }
+
   // ---------- ELEMENTS ----------
   const loginCard   = document.getElementById('loginCard');
   const predictCard = document.getElementById('predictCard');
-  // UPDATED: Use ID for better selection
   const bgVideo     = document.getElementById('bgVideo'); 
   const overlay     = document.querySelector('.overlay');
   const bgImage     = document.getElementById('bgImage');
@@ -417,20 +421,19 @@
   const getKeyBtn = document.getElementById('getKeyBtn');
   const loginBtn  = document.getElementById('loginBtn');
 
-  const panelGameName = document.getElementById('panelGameName');
-  const periodNumber  = document.getElementById('periodNumber');
-  const periodInput   = document.getElementById('periodInput');
-  const genBtn        = document.getElementById('genBtn');
-  const predictionOutput = document.getElementById('predictionOutput');
-  const methodShow    = document.getElementById('methodShow');
-  const keyShow       = document.getElementById('keyShow');
+  const panelGameName   = document.getElementById('panelGameName');
+  const periodNumber    = document.getElementById('periodNumber');
+  const periodInput     = document.getElementById('periodInput');
+  const genBtn          = document.getElementById('genBtn');
+  const predictionOutput= document.getElementById('predictionOutput');
+  const methodShow      = document.getElementById('methodShow');
+  const keyShow         = document.getElementById('keyShow');
+  const serverStatus    = document.getElementById('serverStatus');
 
   const totalCount = document.getElementById('totalCount');
   const winCount   = document.getElementById('winCount');
   const lossCount  = document.getElementById('lossCount');
   const historyList= document.getElementById('historyList');
-  const markWin    = document.getElementById('markWin');
-  const markLoss   = document.getElementById('markLoss');
   const countdownEl= document.getElementById('countdown');
 
   const adminDot   = document.getElementById('adminDot');
@@ -465,11 +468,10 @@
     gameList.appendChild(row);
   });
 
-  // default
   gameName.value = "91 CLUB {PRO LZR}";
   gameVersion.value = "2025753";
 
-  // ---------- SEARCH VERSION (2 sec) ----------
+  // ---------- SEARCH VERSION ----------
   searchBtn.onclick = async ()=>{
     searchSpin.style.display = 'inline-block';
     await new Promise(r=>setTimeout(r,2000));
@@ -500,7 +502,6 @@
     const unit   = admUnit.value;
     if(durVal <= 0) { alert("Duration invalid"); return; }
 
-    // convert to ms
     let ms = 0;
     if(unit==="minutes") ms = durVal*60*1000;
     else if(unit==="hours") ms = durVal*60*60*1000;
@@ -523,9 +524,6 @@
   };
 
   // ---------- LOGIN + LICENSE CHECK ----------
-  let activeKey = null;
-  let countdownTimer = null;
-
   loginBtn.onclick = async ()=>{
     const key = (licenseKey.value || '').trim();
     if(!key){ alert("Enter license key"); return; }
@@ -544,30 +542,21 @@
     activeKey = key;
     keyShow.textContent = key;
     panelGameName.textContent = gameName.value || "GAME";
-    periodNumber.textContent  = gameVersion.value || "2025";
-    periodInput.value         = gameVersion.value || "2025";
 
-    // UPDATED: Video Pause and Screen Switch Logic
-    
-    // 1. Video को रोकें ताकि Prediction Page पर कोई ऑडियो न आए
-    if (bgVideo) {
-        bgVideo.pause();
-    }
-    
-    // 2. Screen switch करें
-    loginCard.classList.add('hidden');
-    predictCard.classList.remove('hidden');
-    
-    // 3. Video background को Hide करें और Image background को Show करें
+    // video off, image on
+    if (bgVideo) bgVideo.pause();
     bgVideo.style.display = 'none';
     overlay.style.display = 'none';
     bgImage.style.display = 'block';
 
-    // start countdown
-    startCountdown(data.expires);
+    loginCard.classList.add('hidden');
+    predictCard.classList.remove('hidden');
 
-    // load history from Firebase
+    startCountdown(data.expires);
     await loadHistoryForKey(key);
+
+    // live engine start after login
+    startLiveEngine();
   };
 
   function startCountdown(expTs){
@@ -594,10 +583,18 @@
 
   // ---------- PREDICTION LOGIC ----------
   let total=0,wins=0,loss=0;
-  let history = []; // local copy of last predictions
+  let history = [];
 
   genBtn.onclick = async ()=>{
     if(!activeKey){ alert("Not logged in"); return; }
+    if(!latestIssue){
+      alert("Live server se period fetch ho raha hai. 2–3 second baad retry karo.");
+      return;
+    }
+
+    const nextPeriod = (BigInt(latestIssue) + 1n).toString();
+    periodNumber.textContent = nextPeriod;
+    periodInput.value = nextPeriod;
 
     genBtn.disabled = true;
     genBtn.textContent = "Analyzing...";
@@ -607,8 +604,10 @@
     const pick = options[Math.floor(Math.random()*options.length)];
     showPrediction(pick);
 
-    await savePredictionToFirebase(pick);
-    await loadHistoryForKey(activeKey); // refresh stats + history
+    const saved = await savePredictionToFirebase(pick, nextPeriod);
+    pendingAuto = { id: saved.id, period: saved.period, prediction: saved.prediction };
+
+    await loadHistoryForKey(activeKey);
 
     genBtn.disabled = false;
     genBtn.textContent = "Generate Prediction";
@@ -628,29 +627,16 @@
     methodShow.textContent = methods[Math.floor(Math.random()*methods.length)];
   }
 
-  async function savePredictionToFirebase(pred){
-    const per = periodInput.value || periodNumber.textContent;
+  async function savePredictionToFirebase(pred, period){
     const obj = {
-      period: per,
+      period: period,
       prediction: pred,
       timestamp: Date.now(),
       result: "PENDING"
     };
     const pRef = push(ref(db,"predictions/"+activeKey));
     await set(pRef,obj);
-    // auto increment period
-    incrementPeriod();
-  }
-
-  function incrementPeriod(){
-    let val = periodInput.value || "0";
-    if(/^\d+$/.test(val)){
-      val = String(BigInt(val)+1n);
-    } else {
-      val = val + "1";
-    }
-    periodInput.value = val;
-    periodNumber.textContent = val;
+    return { id: pRef.key, period, prediction: pred };
   }
 
   async function loadHistoryForKey(key){
@@ -696,7 +682,7 @@
         <div>
           <b style="color:${predColor}">${r.prediction}</b> •
           ${new Date(r.timestamp).toLocaleString()}<br>
-          <span class="muted">Period ${r.period}</span>
+          <span class="muted">Period ${r.period}${r.actualNumber !== undefined ? " • Result " + r.actualNumber : ""}</span>
         </div>
         <div style="text-align:right;">
           <b>${r.result}</b><br>
@@ -715,47 +701,83 @@
     lossCount.textContent  = loss;
   }
 
-  // MARK WIN / LOSS -> last pending prediction
-  markWin.onclick  = ()=> markResult("WIN");
-  markLoss.onclick = ()=> markResult("LOSS");
-
-  async function markResult(res){
-    if(!activeKey){ alert("Not logged in"); return; }
-    if(history.length===0){ alert("No predictions"); return; }
-
-    // find last PENDING (most recent first)
-    const target = history.find(h=>h.result==="PENDING");
-    if(!target){ alert("No PENDING prediction"); return; }
-
-    await update(ref(db,`predictions/${activeKey}/${target.id}`),{
-      result:res,
-      markedAt:Date.now()
-    });
-    await loadHistoryForKey(activeKey);
+  // ---------- LIVE API ENGINE ----------
+  function mapColorFromNumber(num){
+    if(num === 0) return "RED";
+    if(num === 5) return "GREEN";
+    return (num % 2 === 0) ? "RED" : "GREEN";
   }
 
-  // small: enter key on license field triggers login
+  async function fetchLiveData(){
+    try{
+      const res = await fetch(`${API_URL}?v=${Date.now()}`);
+      if(!res.ok) throw new Error(`API error ${res.status}`);
+      const data = await res.json();
+      const list = data?.data?.list;
+      if(!Array.isArray(list) || list.length === 0) return;
+
+      const latest = list[0];
+      latestIssue = latest.issueNumber;
+
+      const nextPeriod = (BigInt(latestIssue) + 1n).toString();
+      periodNumber.textContent = nextPeriod;
+      periodInput.value = nextPeriod;
+      serverStatus.textContent = "ONLINE";
+      serverStatus.style.color = "#00ff66";
+
+      if(pendingAuto && activeKey){
+        const target = list.find(r => r.issueNumber === pendingAuto.period);
+        if(target){
+          const num = parseInt(target.number,10);
+          let isWin = false;
+          const pred = pendingAuto.prediction;
+          if(pred === "RED" || pred === "GREEN"){
+            const actualColor = mapColorFromNumber(num);
+            isWin = (actualColor === pred);
+          }else if(pred === "SMALL" || pred === "BIG"){
+            const actualBS = num >= 5 ? "BIG" : "SMALL";
+            isWin = (actualBS === pred);
+          }
+
+          const resultText = isWin ? "WIN" : "LOSS";
+          await update(ref(db,`predictions/${activeKey}/${pendingAuto.id}`),{
+            result: resultText,
+            markedAt: Date.now(),
+            actualNumber: num
+          });
+          pendingAuto = null;
+          await loadHistoryForKey(activeKey);
+        }
+      }
+    }catch(e){
+      console.error(e);
+      serverStatus.textContent = "OFFLINE";
+      serverStatus.style.color = "#ff004c";
+    }
+  }
+
+  function startLiveEngine(){
+    if(liveTimer) return;
+    fetchLiveData();
+    liveTimer = setInterval(fetchLiveData,5000);
+  }
+
+  // enter key triggers login
   licenseKey.addEventListener('keydown',e=>{
     if(e.key==="Enter") loginBtn.click();
   });
   
-  // ---------- VIDEO AUTO PLAY (WITH SOUND) for Login Page ----------
-  // वीडियो को चलाने का प्रयास करें (मॉडर्न ब्राउज़र के लिए यूजर इंटरैक्शन की आवश्यकता हो सकती है)
+  // video autoplay with sound on login screen
   window.addEventListener('load', () => {
     if (bgVideo) {
-      // पहले वीडियो को अन-म्यूट करें
       bgVideo.muted = false; 
-      // प्ले करने की कोशिश करें
       bgVideo.play().catch(error => {
         console.log('Video autoplay with sound was blocked. User interaction required.');
-        // अगर ब्लॉक हो जाता है, तो यूजर को एक बार क्लिक करने के लिए कहें 
         const playVideoOnce = () => {
           bgVideo.play();
-          // एक बार प्ले होने के बाद लिसनर्स हटा दें
           document.removeEventListener('click', playVideoOnce);
           document.removeEventListener('keydown', playVideoOnce);
         };
-        // क्लिक या की-प्रेस इवेंट पर वीडियो प्ले करने के लिए लिसनर जोड़ें
         document.addEventListener('click', playVideoOnce);
         document.addEventListener('keydown', playVideoOnce);
       });
